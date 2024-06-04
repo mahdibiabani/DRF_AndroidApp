@@ -1,6 +1,8 @@
-from django.shortcuts import get_object_or_404
+import requests
+import json 
+from django.shortcuts import get_object_or_404, redirect
 from django.db.models import Prefetch
-
+from django.urls import reverse
 
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,13 +17,15 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny 
 #ReadOnlyModelViewSet   instead of     ModelViewSet | for only read and get objects without deleting and updating
 from django_filters.rest_framework import DjangoFilterBackend
+
 from store.models import Cart, CartItem, Customer, Order, OrderItem, Product
 from store.paginations import DefaultPagination
 from store.permissions import CustomDjangoModelPermissions, IsAdminOrReadOnly
-from store.serializers import AddCartItemSerializer, CartItemSerializer, CartSerializer, CustomerSerializer, OrderCreateSerializer, OrderForAdminSerializer, OrderSerializer, OrderUpdateSerializer, ProductSerializer, UpdateCartItemSerializer
+from store.serializers import AddCartItemSerializer, CartItemSerializer, CartSerializer, CustomerSerializer, OrderCreateSerializer, OrderForAdminSerializer, OrderItemSerializer, OrderSerializer, OrderUpdateSerializer, ProductSerializer, UpdateCartItemSerializer
 from .filters import ProductFilter
 from .signals import order_created
-
+from rest_framework.views import APIView
+from config import settings
 
 
 
@@ -155,3 +159,126 @@ class OrderViewSet(ModelViewSet):
           return Response(serializer.data)
 
           
+
+
+     def destroy(self, request, pk):
+        order = Order.objects.prefetch_related('items').get(pk=pk)
+
+        if order.items.all().count() > 0:
+            return Response({
+                'error':
+                    'There is some order items including this order.'
+                    'Please remove them first.'},
+                    status=status.HTTP_405_METHOD_NOT_ALLOWED
+                    )
+
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+     
+
+
+#zarinpal
+
+class OrderPayView(APIView):
+    http_method_names = ['get', 'option', 'head']
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+
+        if order.status == 'p':
+            return Response('This order has been paid!')
+
+        request.session['order_pay'] = {
+            'order_id': order.id,
+        }
+
+        request.session['order_id'] = {
+            'order_id': int(order_id),
+        }
+
+        req_data = {
+            "MerchantID": settings.ZARINPALL_MERCHANT_ID,
+            "Amount": int(order.get_total_price() * 50000),
+            "Description": 'TechnoShop',
+            "Phone": '',
+            "CallbackURL": request.build_absolute_uri(reverse('store:order_verify')),
+        }
+
+        request_header = {
+            "accept": "application/json",
+            "content-type": "application/json"
+        }
+        res = requests.post(zarinpal.ZP_API_REQUEST, data=json.dumps(req_data), headers=request_header)
+        print(res)
+        # print(res.json()['data'])
+
+        data = res.json()
+        print(data)
+        authority = data['Authority']
+        order.zarinpal_authority = authority
+        order.save()
+
+        if 'errors' not in data or len(data['errors']) == 0:
+            return redirect(zarinpal.ZP_API_STARTPAY.format(sandbox=zarinpal.sandbox, authority=authority))
+        else:
+            print(data['errors'])
+            # Need to ckeak for order.return_products_to_cart
+            return Response({'error': 'Error from zarinpal'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class OrderVerifyView(APIView):
+    http_method_names = ['get', 'option', 'head']
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        payment_authority = request.GET.get('Authority')
+        payment_status = request.GET.get('Status')
+
+        order = get_object_or_404(Order, zarinpal_authority=payment_authority)
+
+        if payment_status == 'OK':
+            request_header = {
+                "accept": "application/json",
+                "content-type": "application/json",
+            }
+
+            req_data = {
+                'MerchantID': settings.ZARINPALL_MERCHANT_ID,
+                'Amount': int(order.get_total_price() * 50000),
+                'Authority': payment_authority,
+            }
+
+            res = requests.post(
+                    zarinpal.ZP_API_VERIFY,
+                    data=json.dumps(req_data),
+                    headers=request_header,
+
+                )
+            if 'errors' not in res.json():
+                data = res.json()
+                payment_code = data['Status']
+
+                if payment_code == 100:
+                    order.status = 'p'
+                    order.zarinpal_ref_id = data['RefID']
+                    order.zarinpal_data = data
+                    order.save()
+                    return Response({'success': 'Your payment has been successfully completed!'}, status=status.HTTP_200_OK)
+                    # Need to ckeak for order.return_products_to_cart
+                elif payment_code == 101:
+                    return Response({'success': 'Your payment has been successfully completed.'
+                                    ' Of course, this transaction has already been registered!'}, status=status.HTTP_200_OK)
+
+                else:
+                    # Need to ckeak for order.return_products_to_cart
+                    error_code = res.json().get('errors', {}).get('code')
+                    # error_message = res.json()['errors']['message']
+                    error_message = res.json().get('errors', {}).get('message')
+                    return Response({'error': f'The transaction was unsuccessful! {error_message} {error_code} '}, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+
+            # Need to ckeak for order.return_products_to_cart
+            return Response({'error': 'The transaction was unsuccessful or canceled by user !'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from uuid import uuid4
 from ckeditor.fields import RichTextField
+from django.utils.translation import gettext_lazy as _
 
 
 class BannerImage(models.Model):
@@ -35,7 +36,7 @@ class ProductImages(models.Model):
 
 
 class Customer(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     phone_number = models.CharField(max_length=255)
     
     def __str__(self):
@@ -46,11 +47,6 @@ class UnpaidOrderManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(status=Order.ORDER_STATUS_UNPAID)
     
-# class OrderManager(models.Manager):
-#     def get_by_status(self, status):
-#         if status in [Order.ORDER_STATUS_PAID, Order.ORDER_STATUS_UNPAID, Order.ORDER_STATUS_CANCELED]:
-#             return super().get_queryset().filter(status=status)
-#         return super().get_queryset()
 
 
 class Order(models.Model):
@@ -69,6 +65,7 @@ class Order(models.Model):
 
     objects = models.Manager()
     unpaid_orders = UnpaidOrderManager()
+
 
     def __str__(self):
         return f'Order id={self.id}'

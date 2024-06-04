@@ -29,7 +29,7 @@ class ProductSerializer(serializers.ModelSerializer):
         product = Product(**validated_data)
         product.slug = slugify(product.name)
         product.save()
-        return
+        return product
     
 
 
@@ -195,3 +195,4 @@ class OrderCreateSerializer(serializers.Serializer):
             Cart.objects.get(id=cart_id).delete()
 
             return order
+
