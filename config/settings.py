@@ -206,3 +206,6 @@ CKEDITOR_CONFIGS = {
 }
 
 
+# ZarinPal
+SANDBOX = True
+ZARINPALL_MERCHANT_ID = 'aaabbbaaabbbaaabbbaaabbbaaabbbaaabbb'

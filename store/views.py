@@ -18,6 +18,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 #ReadOnlyModelViewSet   instead of     ModelViewSet | for only read and get objects without deleting and updating
 from django_filters.rest_framework import DjangoFilterBackend
 
+from store import zarinpal
 from store.models import Cart, CartItem, Customer, Order, OrderItem, Product
 from store.paginations import DefaultPagination
 from store.permissions import CustomDjangoModelPermissions, IsAdminOrReadOnly
@@ -177,7 +178,7 @@ class OrderViewSet(ModelViewSet):
      
 
 
-#zarinpal
+#zarinpall
 
 class OrderPayView(APIView):
     http_method_names = ['get', 'option', 'head']
@@ -199,8 +200,8 @@ class OrderPayView(APIView):
 
         req_data = {
             "MerchantID": settings.ZARINPALL_MERCHANT_ID,
-            "Amount": int(order.get_total_price() * 50000),
-            "Description": 'TechnoShop',
+            "Amount": int(order.get_total_price()),
+            "Description": 'Mystore',
             "Phone": '',
             "CallbackURL": request.build_absolute_uri(reverse('store:order_verify')),
         }
@@ -245,7 +246,7 @@ class OrderVerifyView(APIView):
 
             req_data = {
                 'MerchantID': settings.ZARINPALL_MERCHANT_ID,
-                'Amount': int(order.get_total_price() * 50000),
+                'Amount': int(order.get_total_price()),
                 'Authority': payment_authority,
             }
 
@@ -281,4 +282,3 @@ class OrderVerifyView(APIView):
 
             # Need to ckeak for order.return_products_to_cart
             return Response({'error': 'The transaction was unsuccessful or canceled by user !'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
