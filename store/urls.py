@@ -6,6 +6,8 @@ app_name = 'store'
 
 router = routers.DefaultRouter()
 
+router.register('banners', views.BannerImageViewSet, basename='Banner')
+
 router.register('products', views.ProductViewSet, basename='product') # product-list | product-detail
 
 router.register('carts', views.CartViewSet, basename='cart')

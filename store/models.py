@@ -8,7 +8,13 @@ from django.utils.translation import gettext_lazy as _
 
 
 class BannerImage(models.Model):
-    banner = models.ImageField(upload_to='banner/', blank=True)
+    title = models.CharField(max_length=255, blank=True)
+    banner = models.ImageField(upload_to='banner/')
+
+    def __str__(self):
+        return self.title    
+
+
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
@@ -27,7 +33,7 @@ class Product(models.Model):
 
 class ProductImages(models.Model):
     images = models.ImageField(upload_to="product-images", default="product.jpg")
-    product = models.ForeignKey(Product, related_name="product_images", on_delete=models.SET_NULL, null=True)
+    product = models.ForeignKey(Product, related_name="images", on_delete=models.SET_NULL, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

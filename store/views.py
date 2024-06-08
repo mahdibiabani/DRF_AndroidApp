@@ -19,10 +19,10 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 
 from store import zarinpal
-from store.models import Cart, CartItem, Customer, Order, OrderItem, Product
+from store.models import BannerImage, Cart, CartItem, Customer, Order, OrderItem, Product
 from store.paginations import DefaultPagination
 from store.permissions import CustomDjangoModelPermissions, IsAdminOrReadOnly
-from store.serializers import AddCartItemSerializer, CartItemSerializer, CartSerializer, CustomerSerializer, OrderCreateSerializer, OrderForAdminSerializer, OrderItemSerializer, OrderSerializer, OrderUpdateSerializer, ProductSerializer, UpdateCartItemSerializer
+from store.serializers import AddCartItemSerializer, BannerImageSerializer, CartItemSerializer, CartSerializer, CustomerSerializer, OrderCreateSerializer, OrderForAdminSerializer, OrderItemSerializer, OrderSerializer, OrderUpdateSerializer, ProductSerializer, UpdateCartItemSerializer
 from .filters import ProductFilter
 from .signals import order_created
 from rest_framework.views import APIView
@@ -32,6 +32,14 @@ from config import settings
 
 #class-based view
 #productlist and product detail both together including post put patch delete-------------------------------------------------
+
+class BannerImageViewSet(ModelViewSet):
+     serializer_class = BannerImageSerializer
+     permission_classes  = [IsAdminOrReadOnly]
+     queryset = BannerImage.objects.all()
+
+     
+
 class ProductViewSet(ModelViewSet):
 
      serializer_class = ProductSerializer

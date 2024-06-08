@@ -3,19 +3,32 @@ from rest_framework import serializers
 from django.core.validators import MinValueValidator
 from django.utils.text import slugify
 from django.db import transaction
-from store.models import Cart, CartItem, Customer, Order, OrderItem, Product
+from store.models import BannerImage, Cart, CartItem, Customer, Order, OrderItem, Product, ProductImages
 
 
 
+class BannerImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BannerImage
+        fields = ['id','title', 'banner']
+
+
+class ProductImagesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImages
+        fields = ['id', 'images']
 
 class ProductSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=255, source='name')
     price = serializers.DecimalField(max_digits=255, decimal_places=2, source='unit_price')
+    images = ProductImagesSerializer(many=True, read_only=True)
+   
     
-
     class Meta:
         model = Product
-        fields = ['id', 'title', 'price', 'inventory', 'description', 'cover']
+        fields = ['id', 'title', 'price', 'inventory', 'description', 'cover', 'images']
+
+  
 
 
 
